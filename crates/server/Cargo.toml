@@ -16,12 +16,12 @@ name = "server"
 # Keying on the pre-rename short name and pointing `package` at the renamed crate (rather than
 # renaming the key) keeps every `use tiling::...`/`use iiif::...`/etc. in this crate unchanged:
 # the `use`-visible name comes from the dependency KEY, not from the target crate's own name.
-tiling = { version = "0.1.0", path = "../tiling", package = "ziv-tiling" }
-iiif = { version = "0.1.0", path = "../iiif", package = "ziv-iiif" }
-projection = { version = "0.1.0", path = "../projection", package = "ziv-projection" }
+tiling = { version = "0.1.1", path = "../tiling", package = "ziv-tiling" }
+iiif = { version = "0.1.1", path = "../iiif", package = "ziv-iiif" }
+projection = { version = "0.1.1", path = "../projection", package = "ziv-projection" }
 # Owns the single embedded copy of the vendored viewer tree; `ziv-exporter` depends on the same
 # crate rather than each deriving its own `rust-embed` struct (see `viewer.rs`).
-viewer-assets = { version = "0.1.0", path = "../viewer-assets", package = "ziv-viewer-assets" }
+viewer-assets = { version = "0.1.1", path = "../viewer-assets", package = "ziv-viewer-assets" }
 axum.workspace = true
 tokio = { workspace = true, features = ["signal"] }
 mime_guess.workspace = true
@@ -59,7 +59,7 @@ thiserror.workspace = true
 metrics-exporter-prometheus = { version = "0.16", default-features = false }
 # The image registry opens images itself (see `registry::ImageRegistry::get`), so this is a real
 # dependency rather than the test-only one it used to be.
-zarr-core = { version = "0.1.0", path = "../zarr-core", package = "ziv-zarr-core" }
+zarr-core = { version = "0.1.1", path = "../zarr-core", package = "ziv-zarr-core" }
 
 [dev-dependencies]
 # The connection-limit tests drive the real accept loop over real sockets.

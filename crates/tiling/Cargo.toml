@@ -17,9 +17,9 @@ name = "tiling"
 # renaming the key to `ziv-zarr-core`) keeps every `use zarr_core::...` in this crate unchanged:
 # the `use`-visible name comes from the dependency KEY (hyphens auto-converted to underscores),
 # not from the target crate's own package name.
-zarr-core = { version = "0.1.0", path = "../zarr-core", package = "ziv-zarr-core" }
-projection = { version = "0.1.0", path = "../projection", package = "ziv-projection" }
-iiif = { version = "0.1.0", path = "../iiif", package = "ziv-iiif" }
+zarr-core = { version = "0.1.1", path = "../zarr-core", package = "ziv-zarr-core" }
+projection = { version = "0.1.1", path = "../projection", package = "ziv-projection" }
+iiif = { version = "0.1.1", path = "../iiif", package = "ziv-iiif" }
 ndarray.workspace = true
 fast_image_resize.workspace = true
 jpeg-encoder.workspace = true

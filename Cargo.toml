@@ -5,7 +5,7 @@ members = ["crates/zarr-core", "crates/projection", "crates/iiif", "crates/tilin
 [workspace.package]
 edition = "2021"
 rust-version = "1.91"
-version = "0.1.0"
+version = "0.1.1"
 license = "MIT"
 repository = "https://github.com/nishad/ziv"
 description = "OME-Zarr to IIIF Image API 3.0 tile server and static exporter, in a single binary"

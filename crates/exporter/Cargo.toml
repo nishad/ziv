@@ -16,14 +16,14 @@ name = "exporter"
 # Keying on the pre-rename short name and pointing `package` at the renamed crate (rather than
 # renaming the key) keeps every `use tiling::...`/`use iiif::...` in this crate unchanged: the
 # `use`-visible name comes from the dependency KEY, not from the target crate's own name.
-tiling = { version = "0.1.0", path = "../tiling", package = "ziv-tiling" }
-iiif = { version = "0.1.0", path = "../iiif", package = "ziv-iiif" }
+tiling = { version = "0.1.1", path = "../tiling", package = "ziv-tiling" }
+iiif = { version = "0.1.1", path = "../iiif", package = "ziv-iiif" }
 rayon.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 # Owns the single embedded copy of the vendored viewer tree; `ziv-server` depends on the same
 # crate rather than each deriving its own `rust-embed` struct (see `viewer.rs`).
-viewer-assets = { version = "0.1.0", path = "../viewer-assets", package = "ziv-viewer-assets" }
+viewer-assets = { version = "0.1.1", path = "../viewer-assets", package = "ziv-viewer-assets" }
 # Only for `Handle`/`Handle::try_current`/`Handle::enter` (`lib.rs`'s `ambient_runtime_handle`),
 # which bridges a `rayon` tile-render worker thread into whatever tokio runtime `ziv export`'s
 # caller is already running inside, so a remote-backed read's `pollster::block_on` call can reach
@@ -35,7 +35,7 @@ viewer-assets = { version = "0.1.0", path = "../viewer-assets", package = "ziv-v
 tokio = { workspace = true, features = ["rt"] }
 
 [dev-dependencies]
-zarr-core = { version = "0.1.0", path = "../zarr-core", package = "ziv-zarr-core" }
+zarr-core = { version = "0.1.1", path = "../zarr-core", package = "ziv-zarr-core" }
 tempfile = "3"
 # Only for `tests/remote_http_export.rs`: reproduces `ziv export`'s own call shape (metadata open
 # and the export itself each run inside `tokio::task::spawn_blocking`, exactly like

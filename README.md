@@ -402,7 +402,7 @@ If you use ziv in your work, please cite it. The repository's
 button turns it into BibTeX or APA:
 
 > Thalhath, N., & Kasaragod, D. (2026). *ziv: an OME-Zarr to IIIF Image API 3.0 tile server and
-> static exporter* (Version 0.1.0) [Computer software]. https://github.com/nishad/ziv
+> static exporter* (Version 0.1.1) [Computer software]. https://github.com/nishad/ziv
 
 ## Licensing
 
