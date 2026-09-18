@@ -1,0 +1,32 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH ziv-serve 1  "serve " 
+.SH NAME
+ziv\-serve \- Serve one or more OME\-Zarr images as a live IIIF Image API 3.0 server
+.SH SYNOPSIS
+\fBziv serve\fR [\fB\-\-addr\fR] [\fB\-\-require\-auth\fR] [\fB\-\-public\-base\-url\fR] [\fB\-\-allow\-internal\-hosts\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIPATHS\fR> 
+.SH DESCRIPTION
+Serve one or more OME\-Zarr images as a live IIIF Image API 3.0 server
+.SH OPTIONS
+.TP
+\fB\-\-addr\fR \fI<ADDR>\fR [default: 127.0.0.1:3000]
+Address to bind
+.TP
+\fB\-\-require\-auth\fR
+Fail startup unless auth is configured. Auth itself is always read from `ZIV_AUTH_BEARER`/`ZIV_AUTH_HMAC_SECRET` env vars (never a CLI flag — see those vars\*(Aq docs); this flag only turns "neither var set" into a startup error instead of quietly serving unauthenticated, for deployments that want to fail loud on a missing secret rather than accidentally serve in the open
+.TP
+\fB\-\-public\-base\-url\fR \fI<PUBLIC_BASE_URL>\fR
+Public origin (e.g. `https://images.example.org`) to embed in the IIIF `id` (and any HMAC\-signed URLs) instead of the bind address. Set this when ziv sits behind a TLS\-terminating reverse proxy so `info.json`\*(Aqs `id` reflects the address clients actually use, not `\-\-addr`. Also settable via `ZIV_PUBLIC_BASE_URL` (this flag wins if both are set). If neither is set, ziv falls back to honoring per\-request `X\-Forwarded\-Proto`/`X\-Forwarded\-Host` headers when present, then finally the bind address — see `server::origin` for the full precedence and trust considerations of honoring forwarded headers by default
+.TP
+\fB\-\-allow\-internal\-hosts\fR
+Disable the SSRF guard on `http(s)://` store specs, permitting loopback/link\-local (including the cloud metadata endpoint 169.254.169.254)/private\-network hosts. OFF by default (secure by default) — only set this for a legitimate internal deployment (e.g. an in\-VPC MinIO reachable at a private IP). Also settable via `ZIV_ALLOW_INTERNAL_HOSTS` (either one being set enables it). See `zarr_core::store::ssrf` for the exact blocked ranges
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.TP
+<\fIPATHS\fR>
+One or more store specs for `.ome.zarr` images: local filesystem paths, or remote URLs (`s3://bucket/path`, `gs://bucket/path`, `az://container/path`, `http(s)://host/path`).
+
+A single image is served at the root exactly as before. Two or more are served under `/i/{name}/`, where the name is the final path component with a trailing `.ome.zarr` or `.zarr` removed. Names derived this way change when a file moves, so they are not safe to cite; see `docs/multi\-image.md`.
+
+Remote credentials are read from the standard env vars for each provider\*(Aqs SDK: AWS (`s3://`): AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION/AWS_DEFAULT_REGION, AWS_ENDPOINT. GCS (`gs://`): GOOGLE_SERVICE_ACCOUNT, GOOGLE_SERVICE_ACCOUNT_KEY, or any other GOOGLE_* var. Azure (`az://`): AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_ACCOUNT_KEY, AZURE_STORAGE_SAS_KEY, or any other AZURE_* var. `http(s)://` stores take no credentials.

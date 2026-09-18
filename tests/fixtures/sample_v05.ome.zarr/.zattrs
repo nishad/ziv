@@ -1,0 +1,18 @@
+{
+  "ome": {
+    "version": "0.5",
+    "multiscales": [{
+      "axes": [
+        {"name":"t","type":"time"}, {"name":"c","type":"channel"},
+        {"name":"z","type":"space"}, {"name":"y","type":"space"}, {"name":"x","type":"space"}
+      ],
+      "datasets": [
+        {"path":"0","coordinateTransformations":[{"type":"scale","scale":[1,1,1,1,1]}]}
+      ]
+    }],
+    "omero": { "channels": [
+      {"color":"FF0000","window":{"start":0,"end":31},"active":true},
+      {"color":"00FF00","window":{"start":0,"end":31},"active":true}
+    ]}
+  }
+}

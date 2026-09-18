@@ -1,0 +1,20 @@
+# cargo-audit configuration.
+#
+# `deny.toml` is the SOURCE OF TRUTH for which advisories this project accepts and why; the
+# rationale for each id below lives there in full. This file exists only because cargo-audit and
+# cargo-deny do not share configuration, and CI runs both: without it the two tools disagree on
+# the same advisory database, and the audit job fails on findings the project has already
+# reviewed and justified.
+#
+# Keep this list in sync with `[advisories] ignore` in deny.toml. If an entry can be dropped
+# there, drop it here in the same change.
+[advisories]
+ignore = [
+    # quick-xml 0.39.x, transitive via object_store 0.13.2, which requires `^0.39.0`. Reaching
+    # the fixed 0.41 needs an object_store bump that `zarrs_object_store`'s `^0.13` forbids.
+    # object_store uses it to parse AWS's own S3 REST responses, not user-supplied documents.
+    "RUSTSEC-2026-0194", # quadratic duplicate-attribute check
+    "RUSTSEC-2026-0195", # unbounded namespace-declaration allocation in NsReader
+    # `paste` is unmaintained (not a vulnerability), transitive via zarrs.
+    "RUSTSEC-2024-0436",
+]

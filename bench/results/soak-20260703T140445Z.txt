@@ -1,0 +1,12 @@
+# ziv soak run
+# started: 2026-07-03T14:04:47Z
+# src: tests/fixtures/sample_multi_tile.ome.zarr
+# duration_secs: 60  sample_interval_secs: 5
+# pid: 73938
+# columns: elapsed_secs rss_kb fd_count
+0 40640 13
+10 40592 13
+20 40592 13
+31 28928 13
+41 12992 13
+51 13024 13

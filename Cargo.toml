@@ -1,0 +1,77 @@
+[workspace]
+resolver = "2"
+members = ["crates/zarr-core", "crates/projection", "crates/iiif", "crates/tiling", "crates/server", "crates/cli", "crates/exporter", "crates/viewer-assets", "crates/fixture-test-support"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.91"
+version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/nishad/ziv"
+description = "OME-Zarr to IIIF Image API 3.0 tile server and static exporter, in a single binary"
+
+[workspace.dependencies]
+zarrs = "0.23"
+ndarray = "0.17"
+serde_json = "1"
+thiserror = "2"
+fast_image_resize = "6"
+jpeg-encoder = "0.7"
+# Pure-Rust PNG encoder. `png` output is REQUIRED at IIIF Image API 3.0 level 2, which ziv
+# advertises; the `png` crate keeps the image-encode path dependency-light and free of C.
+png = "0.18"
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+rust-embed = "8"
+mime_guess = "2"
+clap = { version = "4", features = ["derive"] }
+rayon = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+tower-http = { version = "0.6", features = ["trace", "cors", "request-id"] }
+tower = { version = "0.5", features = ["util"] }
+
+# cargo-dist (binary: `dist`, package: cargo-dist v0.32 config shape) release configuration.
+# Run `dist init && dist generate` once this repo is pushed to GitHub to materialize/refresh
+# `.github/workflows/release.yml` from this table (a hand-written standard-shape placeholder
+# lives there until then — see that file's header comment).
+[workspace.metadata.dist]
+cargo-dist-version = "0.32.0"
+ci = "github"
+installers = ["shell"]
+targets = [
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+# musl targets build via cargo-zigbuild automatically (no flag needed) so the C codecs
+# (blosc-src/zstd-sys, both `cc`-based) link against musl statically — a portable Linux
+# binary with no GLIBC version trap. gnu targets are deliberately not listed as primary
+# release artifacts for the reason above.
+pr-run-mode = "plan"
+install-updater = false
+
+# Shell completions (bash/zsh/fish) + a roff man page per user-facing subcommand, generated via
+# `ziv completions <shell>`/`ziv man [SUBCOMMAND]` (see crates/cli/src/main.rs) and committed
+# under dist-assets/ rather than generated at release-build time, so `dist generate` has no extra
+# build step to wire up beyond listing them here. `crates/cli/tests/dist_assets_are_current.rs`
+# fails `cargo test` if any committed file here drifts from what the binary generates.
+# Regenerate after any clap `///` doc-comment or flag change:
+#   cargo run -p ziv -- completions bash > dist-assets/completions/ziv.bash
+#   cargo run -p ziv -- completions zsh  > dist-assets/completions/_ziv
+#   cargo run -p ziv -- completions fish > dist-assets/completions/ziv.fish
+#   cargo run -p ziv -- man              > dist-assets/man/ziv.1
+#   cargo run -p ziv -- man serve        > dist-assets/man/ziv-serve.1
+#   cargo run -p ziv -- man export       > dist-assets/man/ziv-export.1
+[[workspace.metadata.dist.extra-artifacts]]
+artifacts = [
+    "dist-assets/completions/ziv.bash",
+    "dist-assets/completions/_ziv",
+    "dist-assets/completions/ziv.fish",
+    "dist-assets/man/ziv.1",
+    "dist-assets/man/ziv-serve.1",
+    "dist-assets/man/ziv-export.1",
+    "dist-assets/man/ziv-render.1",
+]
+build = ["true"]

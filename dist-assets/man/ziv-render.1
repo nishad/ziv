@@ -1,0 +1,36 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH ziv-render 1  "render " 
+.SH NAME
+ziv\-render \- Render one projection of an OME\-Zarr image to a single PNG or JPEG file
+.SH SYNOPSIS
+\fBziv render\fR [\fB\-\-at\fR] [\fB\-\-size\fR] [\fB\-\-region\fR] [\fB\-\-format\fR] [\fB\-\-quality\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fISRC\fR> <\fIOUT\fR> 
+.SH DESCRIPTION
+Render one projection of an OME\-Zarr image to a single PNG or JPEG file.
+.PP
+The reason this earns its own command rather than "take a screenshot of `serve`": `\-\-at` takes the exact same projection identifier the server understands (for example `@z=10,c=0,overlay=nuclei:distinct:0.6`), so one call bakes a label overlay — with its palette and opacity — into a flat image. No other tool does that in one step.
+.SH OPTIONS
+.TP
+\fB\-\-at\fR \fI<AT>\fR [default: default]
+Projection identifier to render, in the exact grammar `serve`\*(Aqs IIIF identifier segment understands: `default` for the image as its own metadata describes it, or a dynamic `@z=..,t=..,c=..,label=NAME[:PALETTE]` / `@...,overlay=NAME[:PALETTE[:OPACITY]]` selection
+.TP
+\fB\-\-size\fR \fI<SIZE>\fR [default: max]
+Output size, in the same grammar as the server\*(Aqs IIIF `size` path segment: `max` (the region\*(Aqs native resolution), `w,h`, `w,` (width only), `,h` (height only), `!w,h` (fit inside, preserving aspect ratio), or `pct:N`
+.TP
+\fB\-\-region\fR \fI<REGION>\fR [default: full]
+Region to render, in the same grammar as the server\*(Aqs IIIF `region` path segment: `full`, `square`, `x,y,w,h`, or `pct:x,y,w,h`
+.TP
+\fB\-\-format\fR \fI<FORMAT>\fR
+Output format: png or jpg. Inferred from <OUT>\*(Aqs extension when omitted
+.TP
+\fB\-\-quality\fR \fI<QUALITY>\fR
+JPEG encoder quality, 0\-100 (default 85 if omitted). Applies to JPEG output only — given alongside PNG output, it is ignored, with a note rather than silently
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.TP
+<\fISRC\fR>
+Store spec for the .ome.zarr image: a local filesystem path, or a remote URL (`s3://bucket/path`, `gs://bucket/path`, `az://container/path`, `http(s)://host/path`). See `serve \-\-help` for remote credential env vars
+.TP
+<\fIOUT\fR>
+Output file to write. The format is inferred from this extension unless \-\-format overrides it

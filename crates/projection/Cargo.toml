@@ -1,0 +1,21 @@
+[package]
+name = "ziv-projection"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+
+# `projection` is taken on crates.io, so this publishes under a `ziv-` prefix. The library
+# target keeps the short name so no `use projection::...` statement anywhere else changes.
+[lib]
+name = "projection"
+
+[dependencies]
+ndarray.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+proptest = "1"

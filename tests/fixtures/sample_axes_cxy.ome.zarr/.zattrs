@@ -1,0 +1,15 @@
+{
+  "multiscales": [{
+    "version": "0.4",
+    "axes": [
+      {"name":"c","type":"channel"}, {"name":"x","type":"space"}, {"name":"y","type":"space"}
+    ],
+    "datasets": [
+      {"path":"0","coordinateTransformations":[{"type":"scale","scale":[1,1,1]}]}
+    ]
+  }],
+  "omero": { "channels": [
+    {"color":"FF0000","window":{"start":0,"end":39},"active":true},
+    {"color":"00FF00","window":{"start":0,"end":19},"active":true}
+  ]}
+}

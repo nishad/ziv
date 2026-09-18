@@ -1,0 +1,18 @@
+[package]
+name = "ziv-fixture-test-support"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared drift-check helper for the tests/build_*fixture*.rs binaries"
+publish = false
+
+# Test-support-only crate, not part of the shipped binary. The library target keeps a short name
+# so `use fixture_test_support::...` stays readable in every `tests/build_*fixture*.rs` that
+# depends on it.
+[lib]
+name = "fixture_test_support"
+
+[dependencies]
+tempfile = "3"

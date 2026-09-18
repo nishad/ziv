@@ -1,0 +1,46 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH ziv-export 1  "export " 
+.SH NAME
+ziv\-export \- Export an OME\-Zarr image as a self\-contained static IIIF Image API 3.0 Level\-0 tile tree: every tile file OpenSeadragon v3 will request, a level0 info.json that pins the finite request space, and an embedded viewer. Drop the output directory on any static host (S3/GitHub Pages/CDN) for a live zoomable image with zero backend
+.SH SYNOPSIS
+\fBziv export\fR [\fB\-\-id\fR] [\fB\-\-quality\fR] [\fB\-\-planes\fR] [\fB\-\-labels\fR] [\fB\-\-overlay\-opacity\fR] [\fB\-\-dzi\fR] [\fB\-\-dzi\-name\fR] [\fB\-\-dzi\-tile\-size\fR] [\fB\-\-allow\-internal\-hosts\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fISRC\fR> <\fIOUT_DIR\fR> 
+.SH DESCRIPTION
+Export an OME\-Zarr image as a self\-contained static IIIF Image API 3.0 Level\-0 tile tree: every tile file OpenSeadragon v3 will request, a level0 info.json that pins the finite request space, and an embedded viewer. Drop the output directory on any static host (S3/GitHub Pages/CDN) for a live zoomable image with zero backend
+.SH OPTIONS
+.TP
+\fB\-\-id\fR \fI<ID>\fR
+The IIIF id of the root tree. Defaults to . (relative to the export root). With \-\-planes or \-\-labels it is also the base of every other tree\*(Aqs id: pass the URL the export will be hosted at for absolute, standard ids. A trailing slash is trimmed (a IIIF id must not carry one), and an empty string is rewritten to "."
+.TP
+\fB\-\-quality\fR \fI<QUALITY>\fR [default: 85]
+JPEG quality (1\-100) used for every rendered tile
+.TP
+\fB\-\-planes\fR
+Also export every z\-plane, each as its own Level\-0 tile tree under `planes/{z}/`, at the default timepoint and channels. The exported viewer gets a z slider
+.TP
+\fB\-\-labels\fR
+Also export an overlay of every label image on each exported plane, under `planes/{z}/labels/{i}/`, in distinct colours. The exported viewer gets a label picker
+.TP
+\fB\-\-overlay\-opacity\fR \fI<OVERLAY_OPACITY>\fR [default: 0.6]
+Opacity of exported label overlays, 0 to 1
+.TP
+\fB\-\-dzi\fR
+Also emit a DeepZoom (DZI) tree alongside the IIIF export, sharing the same raster: `{name}.dzi` + `{name}_files/{level}/{col}_{row}.jpg`
+.TP
+\fB\-\-dzi\-name\fR \fI<DZI_NAME>\fR [default: image]
+Base name for the DZI descriptor/tile directory when `\-\-dzi` is set
+.TP
+\fB\-\-dzi\-tile\-size\fR \fI<DZI_TILE_SIZE>\fR [default: 512]
+DZI tile size (pixels) when `\-\-dzi` is set
+.TP
+\fB\-\-allow\-internal\-hosts\fR
+Disable the SSRF guard on `http(s)://` store specs — see `serve \-\-help` for the full explanation. Also settable via `ZIV_ALLOW_INTERNAL_HOSTS`
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fISRC\fR>
+Store spec for the .ome.zarr image: a local filesystem path, or a remote URL (`s3://bucket/path`, `gs://bucket/path`, `az://container/path`, `http(s)://host/path`). See `serve \-\-help` for remote credential env vars
+.TP
+<\fIOUT_DIR\fR>
+Output directory (created if missing). `info.json` and `index.html` are written at its root; tiles under `{region}/{size}/0/default.jpg`

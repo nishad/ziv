@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.91.0
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+      - name: cargo clippy -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.91.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+      - name: cargo nextest run
+        run: cargo nextest run --workspace --all-features --locked
+
+  doctest:
+    name: doctest
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.91.0
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo test --doc
+        run: cargo test --doc --workspace --all-features --locked
+
+  fuzz:
+    # The fuzz crate is a standalone workspace (cargo-fuzz convention), so `cargo build/test/clippy
+    # --workspace` at the repo root never compiles it — without this job a refactor of zarr-core's
+    # open/read path can break the fuzz harness and nobody finds out until someone next runs a
+    # fuzzing campaign. This job builds both targets and gives each a short bounded run, so the
+    # harness is proven to compile AND execute against the current code on every PR.
+    #
+    # Linux-only on purpose: libFuzzer + `-Zsanitizer=address` links cleanly here, but on
+    # aarch64-apple-darwin the current Apple linker rejects zarrs' plugin static initializers
+    # under ASan ("initializer pointer has no target"). Locally on macOS, use
+    # `cargo fuzz build --fuzz-dir fuzz --sanitizer none`, which works and still catches API rot.
+    name: fuzz
+    needs: lint
+    runs-on: ubuntu-latest
+    # rust-toolchain.toml pins the MSRV, and a directory override beats `rustup default nightly`
+    # — so installing nightly is not enough; cargo-fuzz still invoked the pinned 1.91 rustc and
+    # died on "-Z is only accepted on the nightly compiler". RUSTUP_TOOLCHAIN takes precedence
+    # over rust-toolchain.toml, so this is what actually selects nightly for the whole job.
+    env:
+      RUSTUP_TOOLCHAIN: nightly
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      # `--target` is explicit because cargo-fuzz defaults it to the triple IT was built for,
+      # not the host's. taiki-e/install-action fetches a prebuilt cargo-fuzz linked against musl
+      # for portability, so the default became x86_64-unknown-linux-musl on a gnu runner, and
+      # the build died on missing target std ("failed to run `rustc` to learn about
+      # target-specific information").
+      - name: cargo fuzz build
+        run: cargo fuzz build --fuzz-dir fuzz --target x86_64-unknown-linux-gnu
+      # Bounded so the job stays a smoke test, not a campaign. A real campaign runs for hours;
+      # this only has to prove the targets execute and find no crash in the committed corpus.
+      - name: smoke-run decode_chunk
+        run: cargo fuzz run --fuzz-dir fuzz --target x86_64-unknown-linux-gnu decode_chunk -- -max_total_time=60 -rss_limit_mb=4096
+      - name: smoke-run decode_chunk_bytes
+        run: cargo fuzz run --fuzz-dir fuzz --target x86_64-unknown-linux-gnu decode_chunk_bytes -- -max_total_time=60 -rss_limit_mb=4096
+
+  browser:
+    # The viewer's controls are the one part of ziv no Rust test can reach: they are JavaScript
+    # driving OpenSeadragon, and the property that matters ("moving this slider makes the server
+    # return the plane it names, and the browser paints it") only exists once a real browser has
+    # run the script, fetched tiles over HTTP and rasterised them.
+    #
+    # Linux-only and Chromium-only on purpose. This tests ziv's own page, not browser
+    # compatibility of a vendored OpenSeadragon build, so a three-OS matrix would triple the cost
+    # for no extra signal about this repo's code.
+    name: browser (viewer)
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.91.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      # Playwright starts the server itself (see e2e/playwright.config.ts), but it needs the
+      # release binary to exist first, and refuses with a clear message if it does not.
+      - name: build ziv (release)
+        run: cargo build --release -p ziv --locked
+      - name: install e2e deps
+        run: npm ci
+        working-directory: e2e
+      - name: install chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+      - name: playwright test
+        run: npx playwright test
+        working-directory: e2e
+      - name: upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7

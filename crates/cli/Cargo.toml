@@ -1,0 +1,54 @@
+[package]
+name = "ziv"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+# `ziv` is the crates.io entry point (`cargo install ziv`), so it carries the discovery metadata;
+# the internal library crates don't need it.
+keywords = ["ome-zarr", "iiif", "zarr", "tile-server", "static-export"]
+categories = ["command-line-utilities", "science", "multimedia::images"]
+
+[[bin]]
+name = "ziv"
+path = "src/main.rs"
+
+[dependencies]
+# Keying on the pre-rename short name and pointing `package` at the renamed crate (rather than
+# renaming the key) keeps every `use server::...`/`use tiling::...`/etc. unchanged: the
+# `use`-visible name comes from the dependency KEY, not from the target crate's own name.
+server = { version = "0.1.0", path = "../server", package = "ziv-server" }
+zarr-core = { version = "0.1.0", path = "../zarr-core", package = "ziv-zarr-core" }
+tiling = { version = "0.1.0", path = "../tiling", package = "ziv-tiling" }
+exporter = { version = "0.1.0", path = "../exporter", package = "ziv-exporter" }
+# `ziv render` parses `--region`/`--size`/`--format` with the exact same parsers `serve` uses
+# (`parse_region`/`parse_size`/`parse_quality_format`) and the same `@z=...` identifier grammar
+# (`parse_identifier`), plus the whole-image budget constants (`MAX_WHOLE_IMAGE_PIXELS`/
+# `MAX_WHOLE_IMAGE_EDGE`) — reusing this crate rather than re-deriving any of that grammar is the
+# whole point: `render` must accept exactly what `serve` accepts.
+iiif = { version = "0.1.0", path = "../iiif", package = "ziv-iiif" }
+clap.workspace = true
+clap_complete = "4"
+clap_mangen = "0.3"
+tokio.workspace = true
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+serde_json.workspace = true
+axum.workspace = true
+zarr-core = { version = "0.1.0", path = "../zarr-core", package = "ziv-zarr-core" }
+tiling = { version = "0.1.0", path = "../tiling", package = "ziv-tiling" }
+server = { version = "0.1.0", path = "../server", package = "ziv-server" }
+tempfile = "3"
+fixture-test-support = { path = "../fixture-test-support", package = "ziv-fixture-test-support" }
+# Decodes `ziv render`'s PNG output in tests to assert actual pixel content (the overlay-bake-in
+# proof and the size-budget round trip need real decoded pixels, not just "a file was written").
+# Already a workspace dependency (`ziv-tiling`/`ziv-server` encode PNG with it); this crate needs
+# the decode side of the same one, not a new dependency.
+png.workspace = true
+# Snapshot-tests the `--help` surface (tests/cmd/*.trycmd). The completions and man page are
+# generated from the same clap command tree, so an unnoticed change to a flag name or help string
+# silently changes shipped artifacts; this locks the surface and regenerates with TRYCMD=overwrite.
+trycmd = "0.15"

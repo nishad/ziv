@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use ziv in your work, please cite it as below."
+title: "ziv: an OME-Zarr to IIIF Image API 3.0 tile server and static exporter"
+type: software
+authors:
+  - family-names: Thalhath
+    given-names: Nishad
+    orcid: "https://orcid.org/0000-0001-9845-9714"
+    affiliation: "RIKEN Center for Integrative Medical Sciences"
+  - family-names: Kasaragod
+    given-names: Deepa
+    orcid: "https://orcid.org/0000-0002-6540-9259"
+    affiliation: "Hiroshima University"
+version: 0.1.0
+date-released: "2026-09-19"
+license: MIT
+repository-code: "https://github.com/nishad/ziv"
+url: "https://nishad.github.io/ziv-demos/"
+abstract: >-
+  A single binary that serves an OME-Zarr image as a IIIF Image API 3.0 Level 2 service and
+  exports the same image as a static Level 0 tile tree, using the same rendering code. Selection
+  across the dimensions of an OME-Zarr array, and across its segmentation masks, is expressed
+  inside the IIIF identifier, so unmodified IIIF clients can consume it.
+keywords:
+  - OME-Zarr
+  - OME-NGFF
+  - IIIF
+  - bioimaging
+  - microscopy

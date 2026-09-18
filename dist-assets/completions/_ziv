@@ -1,0 +1,215 @@
+#compdef ziv
+
+autoload -U is-at-least
+
+_ziv() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_ziv_commands" \
+"*::: :->ziv" \
+&& ret=0
+    case $state in
+    (ziv)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:ziv-command-$line[1]:"
+        case $line[1] in
+            (serve)
+_arguments "${_arguments_options[@]}" : \
+'--addr=[Address to bind]:ADDR:_default' \
+'--public-base-url=[Public origin (e.g. \`https\://images.example.org\`) to embed in the IIIF \`id\` (and any HMAC-signed URLs) instead of the bind address. Set this when ziv sits behind a TLS-terminating reverse proxy so \`info.json\`'\''s \`id\` reflects the address clients actually use, not \`--addr\`. Also settable via \`ZIV_PUBLIC_BASE_URL\` (this flag wins if both are set). If neither is set, ziv falls back to honoring per-request \`X-Forwarded-Proto\`/\`X-Forwarded-Host\` headers when present, then finally the bind address — see \`server\:\:origin\` for the full precedence and trust considerations of honoring forwarded headers by default]:PUBLIC_BASE_URL:_default' \
+'--require-auth[Fail startup unless auth is configured. Auth itself is always read from \`ZIV_AUTH_BEARER\`/\`ZIV_AUTH_HMAC_SECRET\` env vars (never a CLI flag — see those vars'\'' docs); this flag only turns "neither var set" into a startup error instead of quietly serving unauthenticated, for deployments that want to fail loud on a missing secret rather than accidentally serve in the open]' \
+'--allow-internal-hosts[Disable the SSRF guard on \`http(s)\://\` store specs, permitting loopback/link-local (including the cloud metadata endpoint 169.254.169.254)/private-network hosts. OFF by default (secure by default) — only set this for a legitimate internal deployment (e.g. an in-VPC MinIO reachable at a private IP). Also settable via \`ZIV_ALLOW_INTERNAL_HOSTS\` (either one being set enables it). See \`zarr_core\:\:store\:\:ssrf\` for the exact blocked ranges]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'*::paths -- One or more store specs for `.ome.zarr` images\: local filesystem paths, or remote URLs (`s3\://bucket/path`, `gs\://bucket/path`, `az\://container/path`, `http(s)\://host/path`):_default' \
+&& ret=0
+;;
+(export)
+_arguments "${_arguments_options[@]}" : \
+'--id=[The IIIF id of the root tree. Defaults to . (relative to the export root). With --planes or --labels it is also the base of every other tree'\''s id\: pass the URL the export will be hosted at for absolute, standard ids. A trailing slash is trimmed (a IIIF id must not carry one), and an empty string is rewritten to "."]:ID:_default' \
+'--quality=[JPEG quality (1-100) used for every rendered tile]:QUALITY:_default' \
+'--overlay-opacity=[Opacity of exported label overlays, 0 to 1]:OVERLAY_OPACITY:_default' \
+'--dzi-name=[Base name for the DZI descriptor/tile directory when \`--dzi\` is set]:DZI_NAME:_default' \
+'--dzi-tile-size=[DZI tile size (pixels) when \`--dzi\` is set]:DZI_TILE_SIZE:_default' \
+'--planes[Also export every z-plane, each as its own Level-0 tile tree under \`planes/{z}/\`, at the default timepoint and channels. The exported viewer gets a z slider]' \
+'--labels[Also export an overlay of every label image on each exported plane, under \`planes/{z}/labels/{i}/\`, in distinct colours. The exported viewer gets a label picker]' \
+'--dzi[Also emit a DeepZoom (DZI) tree alongside the IIIF export, sharing the same raster\: \`{name}.dzi\` + \`{name}_files/{level}/{col}_{row}.jpg\`]' \
+'--allow-internal-hosts[Disable the SSRF guard on \`http(s)\://\` store specs — see \`serve --help\` for the full explanation. Also settable via \`ZIV_ALLOW_INTERNAL_HOSTS\`]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':src -- Store spec for the .ome.zarr image\: a local filesystem path, or a remote URL (`s3\://bucket/path`, `gs\://bucket/path`, `az\://container/path`, `http(s)\://host/path`). See `serve --help` for remote credential env vars:_default' \
+':out_dir -- Output directory (created if missing). `info.json` and `index.html` are written at its root; tiles under `{region}/{size}/0/default.jpg`:_files' \
+&& ret=0
+;;
+(render)
+_arguments "${_arguments_options[@]}" : \
+'--at=[Projection identifier to render, in the exact grammar \`serve\`'\''s IIIF identifier segment understands\: \`default\` for the image as its own metadata describes it, or a dynamic \`@z=..,t=..,c=..,label=NAME\[\:PALETTE\]\` / \`@...,overlay=NAME\[\:PALETTE\[\:OPACITY\]\]\` selection]:AT:_default' \
+'--size=[Output size, in the same grammar as the server'\''s IIIF \`size\` path segment\: \`max\` (the region'\''s native resolution), \`w,h\`, \`w,\` (width only), \`,h\` (height only), \`!w,h\` (fit inside, preserving aspect ratio), or \`pct\:N\`]:SIZE:_default' \
+'--region=[Region to render, in the same grammar as the server'\''s IIIF \`region\` path segment\: \`full\`, \`square\`, \`x,y,w,h\`, or \`pct\:x,y,w,h\`]:REGION:_default' \
+'--format=[Output format\: png or jpg. Inferred from <OUT>'\''s extension when omitted]:FORMAT:_default' \
+'--quality=[JPEG encoder quality, 0-100 (default 85 if omitted). Applies to JPEG output only — given alongside PNG output, it is ignored, with a note rather than silently]:QUALITY:_default' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':src -- Store spec for the .ome.zarr image\: a local filesystem path, or a remote URL (`s3\://bucket/path`, `gs\://bucket/path`, `az\://container/path`, `http(s)\://host/path`). See `serve --help` for remote credential env vars:_default' \
+':out -- Output file to write. The format is inferred from this extension unless --format overrides it:_files' \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':shell -- Shell to generate the completion script for:(bash elvish fish powershell zsh)' \
+&& ret=0
+;;
+(man)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::subcommand -- Subcommand to render a page for (e.g. `export`, `serve`). Omit for the top-level page:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_ziv__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:ziv-help-command-$line[1]:"
+        case $line[1] in
+            (serve)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(export)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(render)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(man)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_ziv_commands] )) ||
+_ziv_commands() {
+    local commands; commands=(
+'serve:Serve one or more OME-Zarr images as a live IIIF Image API 3.0 server' \
+'export:Export an OME-Zarr image as a self-contained static IIIF Image API 3.0 Level-0 tile tree\: every tile file OpenSeadragon v3 will request, a level0 info.json that pins the finite request space, and an embedded viewer. Drop the output directory on any static host (S3/GitHub Pages/CDN) for a live zoomable image with zero backend' \
+'render:Render one projection of an OME-Zarr image to a single PNG or JPEG file' \
+'completions:Print a shell completion script to stdout' \
+'man:Print a roff man page to stdout' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'ziv commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__completions_commands] )) ||
+_ziv__subcmd__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv completions commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__export_commands] )) ||
+_ziv__subcmd__export_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv export commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__help_commands] )) ||
+_ziv__subcmd__help_commands() {
+    local commands; commands=(
+'serve:Serve one or more OME-Zarr images as a live IIIF Image API 3.0 server' \
+'export:Export an OME-Zarr image as a self-contained static IIIF Image API 3.0 Level-0 tile tree\: every tile file OpenSeadragon v3 will request, a level0 info.json that pins the finite request space, and an embedded viewer. Drop the output directory on any static host (S3/GitHub Pages/CDN) for a live zoomable image with zero backend' \
+'render:Render one projection of an OME-Zarr image to a single PNG or JPEG file' \
+'completions:Print a shell completion script to stdout' \
+'man:Print a roff man page to stdout' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'ziv help commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__help__subcmd__completions_commands] )) ||
+_ziv__subcmd__help__subcmd__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv help completions commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__help__subcmd__export_commands] )) ||
+_ziv__subcmd__help__subcmd__export_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv help export commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__help__subcmd__help_commands] )) ||
+_ziv__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv help help commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__help__subcmd__man_commands] )) ||
+_ziv__subcmd__help__subcmd__man_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv help man commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__help__subcmd__render_commands] )) ||
+_ziv__subcmd__help__subcmd__render_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv help render commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__help__subcmd__serve_commands] )) ||
+_ziv__subcmd__help__subcmd__serve_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv help serve commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__man_commands] )) ||
+_ziv__subcmd__man_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv man commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__render_commands] )) ||
+_ziv__subcmd__render_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv render commands' commands "$@"
+}
+(( $+functions[_ziv__subcmd__serve_commands] )) ||
+_ziv__subcmd__serve_commands() {
+    local commands; commands=()
+    _describe -t commands 'ziv serve commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_ziv" ]; then
+    _ziv "$@"
+else
+    compdef _ziv ziv
+fi

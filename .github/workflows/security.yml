@@ -1,0 +1,62 @@
+name: Security
+
+on:
+  schedule:
+    # Weekly, Monday 06:00 UTC.
+    - cron: "0 6 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "**/Cargo.lock"
+      - "deny.toml"
+      - ".github/workflows/security.yml"
+  pull_request:
+    paths:
+      - "**/Cargo.lock"
+      - "deny.toml"
+      - ".github/workflows/security.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      # `checks: write` is what lets the action report a finding. On a pull request it annotates
+      # the diff (issues: write is enough), but on a push to main it creates a CHECK RUN instead —
+      # so without this the job dies with "Resource not accessible by integration" the moment it
+      # has anything to say. It found zero vulnerabilities and one `unsound` advisory; the failure
+      # was purely its inability to report that, and it could only ever surface after a merge.
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+      # `rustsec/audit-check` builds cargo-audit from source with whatever toolchain is active,
+      # and the repo's rust-toolchain.toml pin (the project's MSRV) applies to that build too.
+      # cargo-audit's own dependency tree moves faster than this project's MSRV — kstring 2.0.4
+      # already requires 1.96 — so pinning the tool build to the MSRV makes an unrelated tool's
+      # dependency graph able to break this job. RUSTUP_TOOLCHAIN takes precedence over
+      # rust-toolchain.toml, so the audit tool builds on current stable while everything that
+      # actually ships still builds and is tested on the pinned MSRV in ci.yml.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: rustsec/audit-check@v2
+        env:
+          RUSTUP_TOOLCHAIN: stable
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  deny:
+    name: cargo deny (${{ matrix.checks }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        checks: [advisories, licenses, bans, sources]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.checks }}

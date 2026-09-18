@@ -1,0 +1,36 @@
+[package]
+name = "ziv-tiling"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+
+# `tiling` is taken on crates.io, so this publishes under a `ziv-` prefix. The library target
+# keeps the short name so no `use tiling::...` statement anywhere else in the workspace changes.
+[lib]
+name = "tiling"
+
+[dependencies]
+# Keying on the pre-rename short name and pointing `package` at the renamed crate (rather than
+# renaming the key to `ziv-zarr-core`) keeps every `use zarr_core::...` in this crate unchanged:
+# the `use`-visible name comes from the dependency KEY (hyphens auto-converted to underscores),
+# not from the target crate's own package name.
+zarr-core = { version = "0.1.0", path = "../zarr-core", package = "ziv-zarr-core" }
+projection = { version = "0.1.0", path = "../projection", package = "ziv-projection" }
+iiif = { version = "0.1.0", path = "../iiif", package = "ziv-iiif" }
+ndarray.workspace = true
+fast_image_resize.workspace = true
+jpeg-encoder.workspace = true
+png.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+criterion = "0.5"
+fixture-test-support = { path = "../fixture-test-support", package = "ziv-fixture-test-support" }
+
+[[bench]]
+name = "tile"
+harness = false

@@ -1,0 +1,20 @@
+```console
+$ ziv --help
+ziv is a single, zero-install binary that turns an OME-Zarr image into IIIF Image API 3.0 tiles — either as a live HTTP server (`ziv serve`) or a self-contained static tile tree (`ziv export`) you can drop on any static host. Both commands accept a local filesystem path or a remote store URL (s3://, gs://, az://, http(s)://).
+
+Usage: ziv[EXE] <COMMAND>
+
+Commands:
+  serve   Serve one or more OME-Zarr images as a live IIIF Image API 3.0 server
+  export  Export an OME-Zarr image as a self-contained static IIIF Image API 3.0 Level-0 tile tree: every tile file OpenSeadragon v3 will request, a level0 info.json that pins the finite request space, and an embedded viewer. Drop the output directory on any static host (S3/GitHub Pages/CDN) for a live zoomable image with zero backend
+  render  Render one projection of an OME-Zarr image to a single PNG or JPEG file
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+
+```

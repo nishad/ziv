@@ -1,0 +1,39 @@
+[package]
+name = "zarr-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# Standalone workspace, deliberately NOT a member of the repository's root
+# workspace (cargo-fuzz convention) — this keeps the fuzz crate (which needs nightly + libFuzzer
+# instrumentation flags) fully independent of `cargo test --workspace`/`cargo build --workspace`
+# at the repo root, so the normal (stable-toolchain) build/test/clippy commands never need to
+# know it exists.
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde_json = "1"
+
+# Keyed on the pre-rename short name with `package` pointing at the renamed crate, exactly as the
+# workspace crates do, so `use zarr_core::...` in the fuzz targets stays unchanged.
+[dependencies.zarr-core]
+package = "ziv-zarr-core"
+path = "../crates/zarr-core"
+
+[[bin]]
+name = "decode_chunk"
+path = "fuzz_targets/decode_chunk.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "decode_chunk_bytes"
+path = "fuzz_targets/decode_chunk_bytes.rs"
+test = false
+doc = false
+bench = false

@@ -1,0 +1,18 @@
+# Rust
+/target/
+**/*.rs.bk
+# Cargo.lock is committed: this is a binary/application, not a library.
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Playwright MCP scratch output (browser snapshots, console logs) from manual viewer testing
+.playwright-mcp/
+
+# Claude Code local state (worktrees, settings). Never part of the project.
+.claude/

@@ -1,0 +1,41 @@
+```console
+$ ziv render --help
+Render one projection of an OME-Zarr image to a single PNG or JPEG file.
+
+The reason this earns its own command rather than "take a screenshot of `serve`": `--at` takes the exact same projection identifier the server understands (for example `@z=10,c=0,overlay=nuclei:distinct:0.6`), so one call bakes a label overlay — with its palette and opacity — into a flat image. No other tool does that in one step.
+
+Usage: ziv[EXE] render [OPTIONS] <SRC> <OUT>
+
+Arguments:
+  <SRC>
+          Store spec for the .ome.zarr image: a local filesystem path, or a remote URL (`s3://bucket/path`, `gs://bucket/path`, `az://container/path`, `http(s)://host/path`). See `serve --help` for remote credential env vars
+
+  <OUT>
+          Output file to write. The format is inferred from this extension unless --format overrides it
+
+Options:
+      --at <AT>
+          Projection identifier to render, in the exact grammar `serve`'s IIIF identifier segment understands: `default` for the image as its own metadata describes it, or a dynamic `@z=..,t=..,c=..,label=NAME[:PALETTE]` / `@...,overlay=NAME[:PALETTE[:OPACITY]]` selection
+          
+          [default: default]
+
+      --size <SIZE>
+          Output size, in the same grammar as the server's IIIF `size` path segment: `max` (the region's native resolution), `w,h`, `w,` (width only), `,h` (height only), `!w,h` (fit inside, preserving aspect ratio), or `pct:N`
+          
+          [default: max]
+
+      --region <REGION>
+          Region to render, in the same grammar as the server's IIIF `region` path segment: `full`, `square`, `x,y,w,h`, or `pct:x,y,w,h`
+          
+          [default: full]
+
+      --format <FORMAT>
+          Output format: png or jpg. Inferred from <OUT>'s extension when omitted
+
+      --quality <QUALITY>
+          JPEG encoder quality, 0-100 (default 85 if omitted). Applies to JPEG output only — given alongside PNG output, it is ignored, with a note rather than silently
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```

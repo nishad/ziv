@@ -1,0 +1,17 @@
+[package]
+name = "ziv-viewer-assets"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+
+# The embedded viewer's own package/lib names are unprefixed: nothing else needs a short alias
+# for it (unlike the other internal crates, `ziv-server` and `ziv-exporter` reach it as
+# `viewer_assets`, which is already unambiguous), and it was never a name taken on crates.io.
+[lib]
+name = "viewer_assets"
+
+[dependencies]
+rust-embed.workspace = true

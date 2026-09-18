@@ -1,0 +1,164 @@
+/* The built-in viewer's styles, shared by `ziv serve` and every static export. */
+#osd { position: absolute; inset: 0; }
+
+#panel {
+  /* Right-hand side on purpose: the zoom/home/full-screen buttons are in the top-LEFT corner,
+     and a panel there covers them completely. */
+  position: absolute; top: 12px; right: 12px; z-index: 10;
+  width: 240px; max-height: calc(100% - 24px);
+  display: flex; flex-direction: column;
+  background: rgba(24, 24, 26, 0.92);
+  border: 1px solid #3a3a3f; border-radius: 8px;
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #e6e6e8;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+#panel[hidden] { display: none; }
+#panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-bottom: 1px solid #3a3a3f;
+}
+#panel-title { font-weight: 600; letter-spacing: 0.01em; }
+#panel-toggle {
+  display: grid; place-items: center; width: 24px; height: 24px; padding: 0;
+  background: none; border: 1px solid #4a4a52; color: #e6e6e8;
+  border-radius: 4px; cursor: pointer;
+}
+#panel-toggle svg { width: 16px; height: 16px; }
+#panel-toggle:hover { background: #2e2e34; }
+#panel-toggle:focus-visible { outline: 2px solid #6aa9ff; outline-offset: 1px; }
+#panel-body { overflow-y: auto; padding: 10px; display: grid; gap: 14px; }
+#panel.collapsed #panel-body { display: none; }
+/* The divider separates the header from the body. With the body hidden it would sit directly on
+   the panel's own bottom border and draw a doubled edge. */
+#panel.collapsed #panel-head { border-bottom-color: transparent; }
+
+.group > h2 {
+  margin: 0 0 6px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em; color: #9a9aa4;
+}
+/* The readout column is `auto` rather than a fixed width: a 236-plane stack reads "118/235",
+   which a 2.6em column clipped to "118/23" and pushed a scrollbar under the whole panel. */
+.axis { display: grid; grid-template-columns: 1.1em 1fr auto; align-items: center; gap: 8px; }
+.axis label { color: #c9c9d1; }
+.axis output {
+  text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums; color: #9a9aa4;
+}
+.axis input[type="range"] { width: 100%; accent-color: #6aa9ff; }
+
+.channel { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.channel input { accent-color: #6aa9ff; }
+.swatch {
+  width: 12px; height: 12px; border-radius: 3px; flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.channel label { cursor: pointer; }
+
+.picker { display: grid; grid-template-columns: 4.6em 1fr; align-items: center; gap: 8px; }
+/* `display: grid` above outranks the user-agent rule for [hidden], so hiding the palette row
+   needs saying explicitly — the same reason #panel and #status each carry one. */
+.picker[hidden] { display: none; }
+.picker + .picker { margin-top: 6px; }
+.picker label { color: #c9c9d1; }
+.picker select {
+  width: 100%; font: inherit; color: #e6e6e8;
+  background: #2a2a30; border: 1px solid #4a4a52; border-radius: 4px; padding: 3px 5px;
+}
+.picker select:focus-visible { outline: 2px solid #6aa9ff; outline-offset: 1px; }
+.slider-with-readout { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.slider-with-readout input[type="range"] { width: 100%; accent-color: #6aa9ff; }
+.slider-with-readout output {
+  white-space: nowrap; font-variant-numeric: tabular-nums; color: #9a9aa4;
+}
+.note { margin: 6px 0 0; font-size: 11.5px; color: #9a9aa4; }
+.channel input:disabled + .swatch,
+.channel input:disabled ~ label { opacity: 0.55; cursor: not-allowed; }
+
+/* Loading state. Bottom-left: the control panel is top-right and the navigation buttons are
+   top-left, so this is the one free corner. */
+#status {
+  position: absolute; left: 12px; bottom: 12px; z-index: 10;
+  display: flex; align-items: center; gap: 8px;
+  max-width: min(420px, calc(100% - 24px));
+  padding: 7px 12px 7px 10px;
+  background: rgba(24, 24, 26, 0.92);
+  border: 1px solid #3a3a3f; border-radius: 999px;
+  font: 12.5px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #e6e6e8;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+#status[hidden] { display: none; }
+#status.warn { border-color: #6b5a2a; }
+#status.error { border-color: #7a3a3a; }
+
+#spinner {
+  width: 13px; height: 13px; flex: 0 0 auto;
+  border: 2px solid #4a4a52; border-top-color: #6aa9ff; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+#status.warn #spinner { border-top-color: #d9a24a; }
+#status.error #spinner { animation: none; border: 2px solid #d97a7a; border-radius: 3px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  /* A spin is the wrong signal for anyone who asked for less motion, but "something is
+     happening" still has to be visible — so pulse the opacity instead of removing the cue. */
+  #spinner { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+}
+#status-text b { font-weight: 600; }
+#status-detail { color: #9a9aa4; }
+
+#catalogue {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 24px;
+  background: #111;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #e6e6e8;
+}
+/* `display: flex` above outranks the user-agent rule for [hidden], the same reason #panel and
+   #status each carry one. */
+#catalogue[hidden] { display: none; }
+#catalogue h1 {
+  margin: 0 0 10px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em; color: #9a9aa4;
+}
+#catalogue-list {
+  list-style: none; margin: 0; padding: 0;
+  max-height: 70vh; overflow-y: auto;
+  display: grid; gap: 2px; min-width: min(420px, 90vw);
+}
+#catalogue-list a {
+  display: block; padding: 8px 12px; border-radius: 6px;
+  color: #e6e6e8; text-decoration: none;
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid #3a3a3f; background: rgba(24, 24, 26, 0.92);
+}
+#catalogue-list a:hover { background: #2e2e34; border-color: #4a4a52; }
+#catalogue-list a:focus-visible { outline: 2px solid #6aa9ff; outline-offset: 1px; }
+
+#identifier-row {
+  display: flex; flex-direction: column; gap: 8px;
+  border-top: 1px solid #3a3a3f; padding-top: 8px;
+}
+#identifier-live { display: grid; gap: 4px; }
+#identifier {
+  font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #9a9aa4; word-break: break-all;
+}
+#identifier b { color: #c9c9d1; font-weight: 600; }
+#copy-feedback {
+  min-height: 1em; font-size: 11px; color: #6aa9ff;
+}
+#copy-feedback.error { color: #d97a7a; }
+#copy-url {
+  align-self: flex-start;
+  font: 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #e6e6e8; background: #2a2a30;
+  border: 1px solid #4a4a52; border-radius: 4px;
+  padding: 4px 10px; cursor: pointer;
+}
+#copy-url:hover { background: #2e2e34; }
+#copy-url:focus-visible { outline: 2px solid #6aa9ff; outline-offset: 1px; }
+#copy-url:disabled { opacity: 0.5; cursor: not-allowed; }

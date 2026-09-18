@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Which page this is. `ziv serve` sends it as written; `ziv export` rewrites `server` to `static`.
+     A Rust test pins that this marker appears exactly once, so the rewrite can neither miss nor
+     hit twice. -->
+<meta name="ziv-mode" content="server">
+<title>ziv viewer</title>
+<!-- Inline so the browser never requests /favicon.ico, which the server does not serve and which
+     would otherwise put a 404 in the console of an otherwise clean page. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23111'/%3E%3Cpath d='M4 4h8L4 12h8' stroke='%236aa9ff' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  /* Painted before viewer.css arrives, so the page never flashes white while it loads. */
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; width: 100%; background: #111; }
+</style>
+<script>
+  // The viewer's files live under /viewer/ on a server and under ./viewer/ in a static export.
+  // Everything else on this page, and all of viewer.js, is the same in both.
+  window.zivAssetBase =
+    document.querySelector('meta[name="ziv-mode"]').content === "static" ? "./viewer/" : "/viewer/";
+  (function () {
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = window.zivAssetBase + "viewer.css";
+    document.head.appendChild(link);
+  })();
+</script>
+</head>
+<body>
+<div id="osd"></div>
+
+<!-- Shown only at the root of a multi-image server, where there is no image to draw. A
+     single-image server reaches this same page through the root alias and never sees it. -->
+<nav id="catalogue" hidden aria-label="Images">
+  <h1>Images</h1>
+  <ul id="catalogue-list"></ul>
+  <p class="note" id="catalogue-note" hidden></p>
+</nav>
+
+<!-- Built from this image's own ziv/dimensions.json at load. Stays hidden for an image with a
+     single plane and a single channel, where every control would have exactly one position.
+     Moved inside #osd at startup, with #status below, so both survive full page. -->
+<aside id="panel" hidden aria-label="Image controls">
+  <div id="panel-head">
+    <span id="panel-title">ziv</span>
+    <button id="panel-toggle" type="button" aria-expanded="true" aria-controls="panel-body"></button>
+  </div>
+  <div id="panel-body">
+    <div class="group" id="axes-group" hidden>
+      <h2>Plane</h2>
+      <div id="axes"></div>
+    </div>
+    <div class="group" id="channels-group" hidden>
+      <h2>Channels</h2>
+      <div id="channels"></div>
+      <p class="note" id="channels-note" hidden>A label on its own has no channels to combine.</p>
+    </div>
+    <div class="group" id="labels-group" hidden>
+      <h2>Labels</h2>
+      <div class="picker">
+        <label for="label-select">Show</label>
+        <select id="label-select"><option value="">Image</option></select>
+      </div>
+      <div class="picker" id="mode-row" hidden>
+        <label for="mode-select">Mode</label>
+        <select id="mode-select">
+          <option value="overlay">Over the image</option>
+          <option value="only">On its own</option>
+        </select>
+      </div>
+      <div class="picker" id="palette-row" hidden>
+        <label for="palette-select">Colours</label>
+        <select id="palette-select">
+          <option value="">Distinct</option>
+          <option value="table">As declared</option>
+        </select>
+      </div>
+      <div class="picker" id="opacity-row" hidden>
+        <label for="opacity-input">Opacity</label>
+        <span class="slider-with-readout">
+          <input type="range" id="opacity-input" min="0" max="100" step="5" value="60">
+          <output for="opacity-input" id="opacity-output">60%</output>
+        </span>
+      </div>
+    </div>
+    <div id="identifier-row">
+      <div id="identifier-live" aria-live="polite">
+        <div id="identifier"></div>
+        <div id="copy-feedback"></div>
+      </div>
+      <button id="copy-url" type="button" disabled>Copy URL</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Announced politely: a screen reader should hear that tiles are loading, but not be
+     interrupted every time the count ticks. -->
+<div id="status" role="status" aria-live="polite" hidden>
+  <span id="spinner" aria-hidden="true"></span>
+  <span id="status-text"></span>
+</div>
+
+<script>
+  // In order, and after the markup above, because viewer.js looks the markup up by id as soon as it
+  // runs. `async = false` keeps dynamically inserted scripts executing in insertion order.
+  ["openseadragon/openseadragon.min.js", "nav/nav.js", "viewer.js"].forEach(function (file) {
+    var script = document.createElement("script");
+    script.src = window.zivAssetBase + file;
+    script.async = false;
+    document.body.appendChild(script);
+  });
+</script>
+</body>
+</html>

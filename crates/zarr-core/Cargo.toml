@@ -1,0 +1,78 @@
+[package]
+name = "ziv-zarr-core"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+
+# `zarr-core` is a ziv-internal crate, not a general-purpose Zarr library, so it publishes under
+# a `ziv-` prefix (the bare name is free on crates.io, but claiming it would be misleading). The
+# library target keeps the short name so no `use zarr_core::...` statement anywhere else in the
+# workspace has to change.
+[lib]
+name = "zarr_core"
+
+[dependencies]
+zarrs = { workspace = true, features = ["async"] }
+ndarray.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# Pinned to `object_store` 0.13: `zarrs_object_store` 0.6 requires `^0.13` — a 0.14 mismatch
+# would pull two incompatible copies of `object_store` into the dependency graph and fail to
+# build (see zarrs_object_store's own version-compatibility-matrix doc comment).
+object_store = { version = "0.13", features = ["aws", "gcp", "azure", "http"] }
+zarrs_object_store = { version = "0.6", features = ["aws", "http", "fs"] }
+# Drives the async zarrs/object_store calls from `ZarrImage::open` and `read_region_f64`, both
+# of which are synchronous APIs (the latter is called from inside `spawn_blocking` in the
+# server route, i.e. a blocking OS thread with no ambient tokio runtime). `pollster::block_on`
+# runs a future to completion on the calling thread with no dependency on any existing runtime,
+# which is exactly what's needed here: `open()` may be called from a plain sync `main`/test with
+# no runtime at all, and `read_region_f64` runs inside `spawn_blocking`, which is intentionally
+# NOT an async context (blocking it is the point). See `store.rs` for details.
+pollster = "0.4"
+url = "2.5.8"
+# Direct dependency (rather than relying on it purely transitively via `object_store`) so
+# `store::build_http` can hand `HttpBuilder::with_http_connector` a custom `HttpConnector` that
+# builds its own `reqwest::Client` with redirects disabled (see the doc comment on
+# `NoRedirectConnector` in `store.rs`) — `object_store::ClientOptions` exposes no redirect-policy
+# control of its own. Version/features matched to `object_store` 0.13's own `reqwest` dependency
+# (0.12, `rustls-tls-native-roots` + `http2`) so cargo resolves a single shared copy rather than
+# two separate builds of reqwest.
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls-native-roots",
+    "http2",
+] }
+# Runtime-agnostic timer + future-racing for the per-tile remote-read deadline
+# (`PER_TILE_READ_DEADLINE` in `image.rs`). `futures-timer::Delay` runs its own background helper
+# thread rather than depending on an ambient async-runtime reactor, so it works correctly raced
+# (via `futures::future::select`) inside `pollster::block_on` — verified experimentally: neither
+# `tokio::time::timeout` nor `tokio::time::sleep` work under bare `pollster::block_on` (they need
+# a live tokio reactor, which `pollster` deliberately never provides — see `open_remote`'s doc
+# comment for why `pollster` was chosen specifically for having NO ambient-runtime dependency).
+# `futures` is already in the dependency tree transitively (via `object_store`/`reqwest`); pinned
+# here directly since `image.rs` now names `futures::future::{select, Either}` explicitly.
+# Byte-bounded, coalescing cache of decoded chunk planes (`chunk_cache`). Already in the tree via
+# both `server` and `zarrs`, so this adds no new transitive weight. The `future` feature is
+# required: the path that needs caching is the async remote one.
+moka = { version = "0.12", features = ["future"] }
+futures = "0.3"
+futures-timer = "3"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+# Builds a REAL gzip-compressed chunk for the decoder-fuzzing corpus test
+# (`tests/decode_fuzz_corpus.rs`) — malformed variants of a genuinely-compressed chunk (truncated,
+# corrupt header, decompression-bomb-shaped) are the only way to exercise the actual codec decode
+# path (an uncompressed/`compressor: null` chunk, like the other fixtures, never touches a codec
+# at all). Already present in the dependency tree transitively (via zarrs' own gzip codec), pinned
+# here to the same version so no extra copy is pulled in.
+flate2 = "1.1.9"
+# Scratch directories for the malformed-chunk corpus test (`tests/decode_fuzz_corpus.rs`) — each
+# malformed variant gets its own throwaway on-disk zarr tree, cleaned up automatically.
+tempfile = "3"
+fixture-test-support = { path = "../fixture-test-support", package = "ziv-fixture-test-support" }
+# The chunk-cache tests wrap an `object_store` with a counting decorator to prove that overlapping
+# tiles stop re-fetching the same chunk; implementing that trait needs `async_trait`.
+async-trait = "0.1"

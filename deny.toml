@@ -1,0 +1,50 @@
+[graph]
+all-features = true
+
+[advisories]
+ignore = [
+    # Transitive via object_store 0.13.2 (pinned by `zarrs_object_store`'s `^0.13`
+    # requirement, itself pinned per this project's verified remote-store anchor), which
+    # requires quick-xml `^0.39.0`. Upgrading quick-xml past 0.39.x to pick up the fixes
+    # requires an object_store major/minor bump, which is out of scope for this phase.
+    # ziv's own code never parses attacker-controlled XML through this path (it's used
+    # internally by object_store's S3 REST client for parsing AWS's own API responses,
+    # not user-supplied documents) — re-evaluate when `zarrs_object_store` allows a newer
+    # `object_store`.
+    "RUSTSEC-2026-0194", # quick-xml: quadratic run time checking duplicate attribute names
+    "RUSTSEC-2026-0195", # quick-xml: unbounded namespace-declaration allocation (NsReader)
+    # `paste` (transitive via `zarrs`) is unmaintained (not a vulnerability) — no direct
+    # replacement is available upstream; tracked for a future `zarrs` upgrade.
+    "RUSTSEC-2024-0436",
+]
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",       # the C zarr codecs (blosc-src/zstd-sys upstream) are BSD-3-Clause
+    "Unicode-3.0",
+    "Zlib",
+    "ISC",
+    # `jpeg-encoder`'s license is `(MIT OR Apache-2.0) AND IJG` — the IJG (Independent JPEG
+    # Group) license covers the small amount of IJG-derived reference-table code it embeds
+    # alongside its own MIT/Apache-2.0 code; IJG is a permissive, FSF/OSI-recognized license.
+    "IJG",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+# "allow" rather than "deny": every wildcard dependency in this workspace is an in-repo
+# path dependency between our own crates (e.g. `ziv` -> `server`/`zarr-core`/`tiling`/
+# `exporter`), which have no separate published version to pin against — this is the
+# normal shape of a Cargo workspace, not an accidental unpinned third-party dependency.
+wildcards = "allow"
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
