@@ -14,6 +14,10 @@ rendered.
 - **Release binaries.** The 0.1.0 release build failed on every platform, because the workspace
   had no `[profile.dist]` for cargo-dist to build with. 0.1.0 was therefore published to crates.io
   only; 0.1.1 is the first release with downloadable binaries and the installer script.
+- **Linux binaries are glibc builds.** They were planned as static musl builds, but ziv's Blosc
+  dependency compiles Snappy, which is C++, and no musl C++ compiler is available where the
+  release is built. The Linux binaries need glibc 2.35 or newer (Ubuntu 22.04+, Debian 12+,
+  Fedora 36+); on older systems, install with `cargo install ziv`.
 - **Closed output pipes.** `ziv completions <shell>` panicked, and `ziv man` printed
   `Broken pipe (os error 32)`, when the reader closed the output early, as in
   `ziv completions bash | head`. Both now exit quietly, as standard command-line tools do.
