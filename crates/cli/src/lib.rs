@@ -444,7 +444,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::Completions { shell } => {
             let mut cmd = Cli::command();
             let name = cmd.get_name().to_string();
-            clap_complete::generate(shell, &mut cmd, name, &mut std::io::stdout());
+            // Rendered into a buffer first: `clap_complete::generate` panics if its own write
+            // fails, which a closed pipe (`ziv completions bash | head`) makes it do.
+            let mut script = Vec::new();
+            clap_complete::generate(shell, &mut cmd, name, &mut script);
+            write_stdout(&script)?;
         }
         Command::Man { subcommand } => {
             let mut cmd = Cli::command();
@@ -460,11 +464,27 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .ok_or_else(|| format!("ziv man: no such subcommand: {name}"))?,
                 None => cmd,
             };
-            let man = clap_mangen::Man::new(target);
-            man.render(&mut std::io::stdout())?;
+            let mut page = Vec::new();
+            clap_mangen::Man::new(target).render(&mut page)?;
+            write_stdout(&page)?;
         }
     }
     Ok(())
+}
+
+/// Writes `bytes` to stdout, treating a reader that closed the pipe early as success.
+///
+/// `ziv completions bash | head` closes the pipe once `head` has its lines. That is the reader
+/// saying it has what it wants, not an error, and standard command-line tools exit quietly on it.
+/// Rust ignores `SIGPIPE`, so the closed pipe arrives here as a `BrokenPipe` write error instead of
+/// killing the process, and has to be recognised explicitly.
+fn write_stdout(bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut out = std::io::stdout().lock();
+    match out.write_all(bytes).and_then(|()| out.flush()) {
+        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        other => other,
+    }
 }
 
 /// Picks `singular` for a count of exactly 1, `plural` otherwise. Views, tiles and tile files are
