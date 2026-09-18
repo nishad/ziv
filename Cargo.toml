@@ -75,3 +75,10 @@ artifacts = [
     "dist-assets/man/ziv-render.1",
 ]
 build = ["true"]
+
+# The profile cargo-dist builds release artifacts with (`--profile dist`). `dist init` writes this
+# section; without it every release build fails with "profile `dist` is not defined", which is
+# exactly how the first v0.1.0 release run failed on all four targets.
+[profile.dist]
+inherits = "release"
+lto = "thin"
