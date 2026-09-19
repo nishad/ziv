@@ -237,7 +237,7 @@ either bound, the tree degrades as a whole: `sizes` is left untrimmed, no `maxWi
 is declared (a bound ziv does not honour is worse than none), no whole-image derivatives or
 `full/max` are written, and the export warns, naming the image's own size and the budget, that
 these trees serve tiles only. Tiles and the viewer are unaffected: only whole-image requests
-(`full/max`, `full/{w},{h}`) degrade. A multi-view export that is over budget still writes
+(`full/max`, `full/{w},{h}`) degrade. An export that is over budget still writes
 `manifest.json` pointing at the coarsest pyramid level as each canvas's body, provided that
 level's own whole image is itself within budget; when even that is too large, no `manifest.json`
 is written and the export warns instead of shipping one whose only body would 404.
@@ -295,8 +295,8 @@ never asks for one.
 
 ## IIIF Presentation 3 manifest
 
-`--planes` or `--labels` (either, on a plan with more than one view) also writes `manifest.json`;
-see [`README.md`](../README.md#exporting-planes-and-label-overlays) and spec §6.2. Its ids are
+Every export writes `manifest.json` (one canvas per exported plane; `--planes` and `--labels` add
+more of them); see [`README.md`](../README.md#exporting-planes-and-label-overlays) and spec §6.2. Its ids are
 absolute, and the manifest is valid Presentation 3, only when `--id` is an `http(s)` URL; without
 one its ids are paths relative to the export root, which is not valid Presentation 3 (most IIIF
 viewers will not load it), and the export prints a warning saying so at write time.

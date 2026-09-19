@@ -4,6 +4,15 @@ All notable changes to ziv are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **Every export now writes a manifest.** `ziv export` used to write `manifest.json` only when
+  `--planes` or `--labels` produced more than one view; a plain export now gets a one-canvas
+  manifest too, so it opens directly in Mirador or another IIIF Presentation client instead of
+  needing an image service consumer.
+
 ## [0.1.1] - 2026-09-19
 
 The first release with prebuilt binaries. Nothing changes in how images are served, exported or

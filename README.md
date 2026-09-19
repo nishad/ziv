@@ -8,10 +8,11 @@
   dynamic region/size/rotation/quality/format requests, metadata-driven multichannel projection,
   and OME-NGFF segmentation masks (see [`docs/labels.md`](docs/labels.md)).
 - **`ziv export <src> <out-dir>`** — a static export: a self-contained IIIF Image API 3.0
-  (Level 0) tile tree — every file OpenSeadragon v3 will ever request, plus `info.json` and an
-  embedded viewer — that you can drop on any static host (S3, GitHub Pages, a CDN) for a live
-  zoomable image with zero backend. Pass `--planes` and `--labels` to also export every z-plane and
-  a label overlay per plane, with a IIIF Presentation 3 manifest tying them together (see
+  (Level 0) tile tree — every file OpenSeadragon v3 will ever request, plus `info.json`, a IIIF
+  Presentation 3 `manifest.json`, and an embedded viewer — that you can drop on any static host
+  (S3, GitHub Pages, a CDN) for a live zoomable image with zero backend, opening directly in
+  Mirador or another IIIF Presentation client. Pass `--planes` and `--labels` to also export every
+  z-plane and a label overlay per plane, tied together on the same manifest (see
   [Exporting planes and label overlays](#exporting-planes-and-label-overlays)), or `--dzi` to
   additionally emit a DeepZoom (`.dzi`) tile pyramid from the same rasters.
 - **`ziv render <src> <out>`** — one projection, one picture: renders a single PNG or JPEG file
@@ -89,9 +90,9 @@ cargo run -p ziv -- export ./path/to/image.ome.zarr ./out
 
 ## Exporting planes and label overlays
 
-A plain `ziv export` writes one Level-0 tree for the image's default view. Two opt-in flags widen
-that to every z-plane and every label image, and a viewer that browses between them with no
-backend:
+A plain `ziv export` writes one Level-0 tree for the image's default view, plus a one-canvas
+`manifest.json` for it. Two opt-in flags widen that to every z-plane and every label image, and a
+viewer that browses between them with no backend:
 
 ```sh
 ziv export ./image.ome.zarr ./out --planes --labels --overlay-opacity 0.6
@@ -109,10 +110,10 @@ ziv export ./image.ome.zarr ./out --planes --labels --overlay-opacity 0.6
 Every export flag, including `--planes`/`--labels`/`--overlay-opacity`/`--id`/`--dzi`, is
 documented in `man ziv-export` (`ziv man export`).
 
-Whenever `--planes` or `--labels` makes the export render more than one view, it also writes a
-IIIF Presentation 3 `manifest.json` (one canvas per exported plane, with a `Choice` of intensity
-plus overlays where they exist), so the same folder opens in a standard IIIF viewer as well as
-ziv's own. Pass an absolute `--id` (the URL the folder will be hosted at) to get a manifest with
+Every export writes a IIIF Presentation 3 `manifest.json` alongside it (one canvas per exported
+plane, with a `Choice` of intensity plus overlays where they exist on that plane), so the same
+folder opens in a standard IIIF viewer — Mirador, the Universal Viewer — as well as ziv's own. Pass
+an absolute `--id` (the URL the folder will be hosted at) to get a manifest with
 valid, dereferenceable ids; without it the manifest is still usable as a template but prints a
 warning and is not valid Presentation 3. A trailing slash on `--id` is trimmed (a IIIF `id` must
 not carry one), and an empty `--id` is rewritten to `.`. See
@@ -128,7 +129,7 @@ out/
   full/, {x,y,w,h}/    its tiles, plus one whole-image file per size, and full/max  (within budget)
   planes/              one Level-0 tree per exported plane, and its label overlays  (--planes/--labels)
   ziv/                 dimensions.json and views.json, written by every export
-  manifest.json        IIIF Presentation 3                                          (more than one view)
+  manifest.json        IIIF Presentation 3, one canvas per exported plane            (every export)
   index.html, viewer/  the shared viewer, in static mode; see docs/viewer.md
 ```
 
