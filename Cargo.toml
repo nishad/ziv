@@ -50,7 +50,7 @@ targets = [
 # the 0.1.1 musl builds failed looking for `x86_64-linux-musl-g++`. Building on Ubuntu 22.04 uses
 # its native g++ and pins the floor at glibc 2.35 (Ubuntu 22.04+, Debian 12+, Fedora 36+). The
 # aarch64 build runs on GitHub's native ARM runner, so nothing C++ is cross-compiled.
-pr-run-mode = "upload"
+pr-run-mode = "plan"
 install-updater = false
 
 [workspace.metadata.dist.github-custom-runners]
