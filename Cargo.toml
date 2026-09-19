@@ -40,17 +40,22 @@ cargo-dist-version = "0.32.0"
 ci = "github"
 installers = ["shell"]
 targets = [
-    "x86_64-unknown-linux-musl",
-    "aarch64-unknown-linux-musl",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
     "x86_64-apple-darwin",
     "aarch64-apple-darwin",
 ]
-# musl targets build via cargo-zigbuild automatically (no flag needed) so the C codecs
-# (blosc-src/zstd-sys, both `cc`-based) link against musl statically — a portable Linux
-# binary with no GLIBC version trap. gnu targets are deliberately not listed as primary
-# release artifacts for the reason above.
+# Linux binaries are glibc builds, not musl. zarrs pulls in blosc-src, whose Snappy support is C++
+# (snappy_src, via link-cplusplus), and GitHub's Ubuntu runners have no C++ compiler targeting musl:
+# the 0.1.1 musl builds failed looking for `x86_64-linux-musl-g++`. Building on Ubuntu 22.04 uses
+# its native g++ and pins the floor at glibc 2.35 (Ubuntu 22.04+, Debian 12+, Fedora 36+). The
+# aarch64 build runs on GitHub's native ARM runner, so nothing C++ is cross-compiled.
 pr-run-mode = "plan"
 install-updater = false
+
+[workspace.metadata.dist.github-custom-runners]
+x86_64-unknown-linux-gnu = "ubuntu-22.04"
+aarch64-unknown-linux-gnu = "ubuntu-22.04-arm"
 
 # Shell completions (bash/zsh/fish) + a roff man page per user-facing subcommand, generated via
 # `ziv completions <shell>`/`ziv man [SUBCOMMAND]` (see crates/cli/src/main.rs) and committed
@@ -64,6 +69,7 @@ install-updater = false
 #   cargo run -p ziv -- man              > dist-assets/man/ziv.1
 #   cargo run -p ziv -- man serve        > dist-assets/man/ziv-serve.1
 #   cargo run -p ziv -- man export       > dist-assets/man/ziv-export.1
+#   cargo run -p ziv -- man render       > dist-assets/man/ziv-render.1
 [[workspace.metadata.dist.extra-artifacts]]
 artifacts = [
     "dist-assets/completions/ziv.bash",
