@@ -304,6 +304,45 @@ fn export_writes_the_manifest_fallback_body_when_the_coarsest_level_is_within_bu
     assert!(!dir.path().join("full/max/0/default.jpg").exists());
 }
 
+/// The same over-budget-but-coarsest-fits shape as the previous test, but for a PLAIN, single-view
+/// export (no `--planes`): every export writes a manifest now, not just a multi-view one, so this
+/// shape -- the public demo site's whole-brain image (19120x13350, nine pyramid levels) is exactly
+/// this case -- must still get a one-canvas manifest whose body is the coarsest level's own whole
+/// image, backed by a real file, the same as the multi-view case above.
+#[test]
+fn a_plain_single_view_export_over_budget_still_gets_a_manifest_from_the_coarsest_level() {
+    let mut engine = pyramid_over_budget_with_a_multi_tile_coarsest_level();
+    engine.size_z = 1;
+    let plan = iiif::level0_sizes(&engine.info).expect("a valid pyramid OSD can pin");
+    assert!(!plan.within_budget(), "{plan:?}");
+    assert!(iiif::whole_image_within_budget(2048, 2048));
+
+    let dir = tempfile::tempdir().unwrap();
+    let summary = export(&engine, dir.path(), &ExportOptions::default()).unwrap();
+
+    assert_eq!(summary.views, 1, "no --planes is one view");
+    assert!(dir.path().join("manifest.json").exists());
+    let manifest = read_json(&dir.path().join("manifest.json"));
+    let canvases = manifest["items"].as_array().unwrap();
+    assert_eq!(canvases.len(), 1, "a plain export has exactly one canvas");
+
+    assert_eq!(manifest["start"]["type"], "Canvas");
+    assert_eq!(manifest["start"]["id"], canvases[0]["id"]);
+
+    let body = &canvases[0]["items"][0]["items"][0]["body"];
+    let id = body["id"].as_str().unwrap();
+    assert!(
+        id.ends_with("full/2048,2048/0/default.jpg"),
+        "expected the coarsest level's own whole image, got {id}"
+    );
+    assert!(
+        dir.path().join(id).exists(),
+        "manifest body {id} must name a file the writer actually wrote"
+    );
+    // No trace of the level 0 contract's own (over-budget) additions.
+    assert!(!dir.path().join("full/max/0/default.jpg").exists());
+}
+
 /// Task 4 rescope: within budget, each manifest canvas body must point at the LARGEST advertised
 /// whole image (`maxWidth`x`maxHeight`), not merely the largest one that happens to already exist
 /// in OpenSeadragon's own request space. A 2048x2048 pyramid at tile 512 (levels 2048, 1024, 512,

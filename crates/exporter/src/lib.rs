@@ -26,7 +26,7 @@
 //! {out_dir}/
 //!   info.json                           <- id: "." (relative, resolves under any path/host)
 //!   index.html                          <- the shared viewer page, mode marker set to static
-//!   manifest.json                       <- IIIF Presentation 3 manifest, written with >1 view
+//!   manifest.json                       <- IIIF Presentation 3 manifest, written by every export
 //!   full/{w},{h}/0/default.jpg          <- whole-image files: every size info.json may advertise
 //!   full/max/0/default.jpg              <- within budget: the IIIF Level-0 contract's own URL
 //!   {x,y,w,h}/{w,h}/0/default.jpg       <- one directory tree per region tile

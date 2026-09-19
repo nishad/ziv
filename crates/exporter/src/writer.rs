@@ -201,17 +201,19 @@ pub fn export_with_progress(
         },
     );
 
-    // A manifest presents several trees as one object, so it is written only when there is more
-    // than one to present — UNLESS this tree is over the whole-image budget AND even its
+    // Every export writes a manifest, one canvas per exported plane (just one for a plain export
+    // with no `--planes`/`--labels`) — UNLESS this tree is over the whole-image budget AND even its
     // SMALLEST level is too large to serve as the manifest's fallback body
     // (`manifest::manifest_json`'s own fallback, `enumerate::smallest_level_whole_image`): there is
     // then no file any canvas body could ever name, at this budget, so writing manifest.json would
     // just be another 404 waiting to happen. Trimming never drops the LAST entry of `sizes` (only
     // ever the finest), so the smallest level's own dimensions are always `shared_info.sizes`'s
-    // last entry, regardless of whether this plan is trimmed.
-    let mut writing_manifest = plan.views.len() > 1;
+    // last entry, regardless of whether this plan is trimmed. A single-image export without a
+    // manifest cannot be opened in Mirador or the Universal Viewer, which consume manifests, not a
+    // bare `info.json` service, so this is unconditional on view count.
+    let mut writing_manifest = true;
     let mut manifest_needs_body = false;
-    if writing_manifest && !level0_plan.within_budget() {
+    if !level0_plan.within_budget() {
         let (coarsest_w, coarsest_h) = *shared_info
             .sizes
             .last()
@@ -273,13 +275,11 @@ pub fn export_with_progress(
     // Same order as the events emitted above: the level0 cost warning first, then the plan's own.
     let mut warnings: Vec<String> = level0_cost_warning.into_iter().collect();
     warnings.extend(plan.warnings.clone());
-    // Gated on the PLAN, not the flags (the same `writing_manifest` decided above, before the
-    // view loop): a manifest means exactly one thing, presenting several trees as one object, so
-    // it is written only when there is more than one to present AND at least one file can exist
-    // for its bodies to name. A `--labels` (or `--planes`) that adds nothing already warns about
-    // that on its own; gating on the flags instead would additionally write a single-canvas
-    // manifest nobody asked for, with its own spurious relative-id warning on top. A one-view
-    // export is already fully usable through its own `info.json`.
+    // `writing_manifest` (decided above, before the view loop) is false in exactly one case now:
+    // this image is over the whole-image budget AND even its smallest level is too large to serve
+    // as the manifest's fallback body, so no file could ever exist for a canvas body to name.
+    // Every other export, including a plain one-view export, gets a manifest: a single image with
+    // none cannot be opened in Mirador or the Universal Viewer.
     if writing_manifest {
         let (manifest, manifest_warnings) =
             crate::manifest::manifest_json(&plan, &dims, &shared_info, &options.id, &options.name);
@@ -288,10 +288,10 @@ pub fn export_with_progress(
         }
         warnings.extend(manifest_warnings);
         write_file(&out_dir.join("manifest.json"), &pretty(&manifest))?;
-    } else if plan.views.len() > 1 {
-        // We would otherwise have written a manifest (more than one view), but even this image's
-        // smallest level is over the whole-image budget: no file exists, or ever will at this
-        // budget, for a canvas body to name.
+    } else {
+        // We would otherwise have written a manifest, but even this image's smallest level is over
+        // the whole-image budget: no file exists, or ever will at this budget, for a canvas body to
+        // name.
         let warning = crate::manifest::NO_MANIFEST_OVER_BUDGET_WARNING.to_string();
         on_event(ExportEvent::Warning(warning.clone()));
         warnings.push(warning);
@@ -734,17 +734,29 @@ mod tests {
             ExportSummary {
                 views: 1,
                 tiles: expected,
-                warnings: vec![]
+                // Every export writes a manifest now, and the default `--id` (`.`) is relative,
+                // so its own warning is the only one here.
+                warnings: vec![crate::manifest::RELATIVE_MANIFEST_WARNING.to_string()]
             }
         );
+        // The manifest's own relative-id warning is emitted as an event too, after the tree is
+        // written, so it -- not `TreeWritten` -- is `events.last()` now.
         assert_eq!(
-            events.last(),
+            events
+                .iter()
+                .find(|ev| matches!(ev, ExportEvent::TreeWritten { .. })),
             Some(&ExportEvent::TreeWritten {
                 index: 1,
                 total: 1,
                 folder: ".".into(),
                 tiles: expected
             })
+        );
+        assert_eq!(
+            events.last(),
+            Some(&ExportEvent::Warning(
+                crate::manifest::RELATIVE_MANIFEST_WARNING.to_string()
+            ))
         );
     }
 
@@ -878,9 +890,16 @@ mod tests {
         );
         let warning = "--labels adds nothing: the image has no label images".to_string();
         assert_eq!(events[1], ExportEvent::Warning(warning.clone()));
-        // A single-view plan (this one: `--labels` added nothing) never triggers the manifest, so
-        // no second, manifest-only warning should follow this one onto `summary.warnings`.
-        assert_eq!(summary.warnings, vec![warning]);
+        // This plan has one view (`--labels` added nothing), but every export writes a manifest
+        // regardless of view count, and the default `--id` (`.`) is relative, so its own warning
+        // follows this one onto `summary.warnings`.
+        assert_eq!(
+            summary.warnings,
+            vec![
+                warning,
+                crate::manifest::RELATIVE_MANIFEST_WARNING.to_string()
+            ]
+        );
     }
 
     /// `level0_contract_requests`'s `manifest_needs_body` branch, exercised directly against a

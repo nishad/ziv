@@ -50,11 +50,25 @@ fn tree_dir(root: &Path, folder: &str) -> PathBuf {
 }
 
 fn walk_jpegs(dir: &Path, out: &mut HashSet<PathBuf>) {
+    walk_named(dir, &["default.jpg"], out);
+}
+
+/// Like `walk_jpegs`, but also collects `manifest.json`: used only where a test's expected file
+/// set needs the manifest counted alongside the tile files, rather than checked separately by a
+/// bare `.exists()` (which would not catch an orphan extra copy).
+fn walk_jpegs_and_manifest(dir: &Path, out: &mut HashSet<PathBuf>) {
+    walk_named(dir, &["default.jpg", "manifest.json"], out);
+}
+
+fn walk_named(dir: &Path, names: &[&str], out: &mut HashSet<PathBuf>) {
     for entry in fs::read_dir(dir).unwrap() {
         let path = entry.unwrap().path();
         if path.is_dir() {
-            walk_jpegs(&path, out);
-        } else if path.file_name().is_some_and(|n| n == "default.jpg") {
+            walk_named(&path, names, out);
+        } else if path
+            .file_name()
+            .is_some_and(|n| names.iter().any(|name| n == *name))
+        {
             out.insert(path);
         }
     }
@@ -466,33 +480,71 @@ fn bodies(canvas: &serde_json::Value) -> Vec<serde_json::Value> {
     }
 }
 
+/// Every export writes a manifest now, even a plain one with no `--planes`/`--labels`: a single
+/// image with no manifest cannot be opened in Mirador or the Universal Viewer, which consume
+/// manifests, not bare `info.json` services. A plain export has exactly one view, so the manifest
+/// must have exactly one canvas, a `start` naming that same canvas, and a body naming a file the
+/// export actually wrote, carrying the IIIF image `service` so a viewer can tile it rather than
+/// only showing the static body image.
 #[test]
-fn a_plain_export_writes_no_manifest() {
+fn a_plain_export_writes_a_manifest_with_one_canvas() {
     let (dir, _) = export_to(&engine(MULTIDIM), &ExportOptions::default());
-    assert!(!dir.path().join("manifest.json").exists());
+    let manifest_path = dir.path().join("manifest.json");
+    assert!(
+        manifest_path.exists(),
+        "a plain export must write manifest.json"
+    );
+    let manifest = read_json(&manifest_path);
+    let canvases = manifest["items"].as_array().unwrap();
+    assert_eq!(
+        canvases.len(),
+        1,
+        "a plain export has exactly one view: {manifest:#}"
+    );
+
+    assert_eq!(manifest["start"]["type"], "Canvas");
+    let start_id = manifest["start"]["id"].as_str().unwrap();
+    assert_eq!(
+        start_id,
+        canvases[0]["id"].as_str().unwrap(),
+        "start must name the sole canvas: {manifest:#}"
+    );
+
+    let body = &bodies(&canvases[0])[0];
+    let body_id = body["id"].as_str().unwrap();
+    assert!(
+        dir.path().join(body_id).exists(),
+        "body {body_id} must name a file on disk"
+    );
+    assert_eq!(
+        body["service"][0]["type"], "ImageService3",
+        "the body must carry an image service so a viewer can tile it: {body:#}"
+    );
 }
 
 /// The level 0 contract is unconditional, not tied to whether a manifest happens to exist:
 /// `sample_no_pyramid.ome.zarr` is the one committed fixture whose sole level has no whole-image
 /// derivative of its own (every other fixture's smallest level fits in one tile), so it is the
 /// fixture that used to expose a plain, single-view export shipping a `level0` profile whose own
-/// `full/max` 404ed. A plain export of it (one view, no `--planes`, no `--labels`) still writes no
-/// `manifest.json` — but `full/max/0/default.jpg` MUST exist regardless, and its file set is
-/// exactly the enumerated request space plus the level 0 contract's own additions, no more.
+/// `full/max` 404ed. A plain export of it (one view, no `--planes`, no `--labels`) now also writes
+/// `manifest.json` (every export does) — and `full/max/0/default.jpg` MUST exist regardless — so
+/// its file set is exactly the enumerated request space plus the level 0 contract's own additions
+/// plus the manifest, no more.
 #[test]
-fn a_plain_export_of_a_no_pyramid_image_writes_full_max_with_no_manifest() {
+fn a_plain_export_of_a_no_pyramid_image_writes_full_max_and_a_manifest() {
     let e = engine(NO_PYRAMID);
     let (dir, _) = export_to(&e, &ExportOptions::default());
-    assert!(!dir.path().join("manifest.json").exists());
+    assert!(dir.path().join("manifest.json").exists());
     assert_every_advertised_size_exists(dir.path(), ".");
 
-    let expected: HashSet<PathBuf> = expected_tree_relpaths(&e.image_info("."))
+    let mut expected: HashSet<PathBuf> = expected_tree_relpaths(&e.image_info("."))
         .iter()
         .map(|relpath| dir.path().join(relpath))
         .collect();
+    expected.insert(dir.path().join("manifest.json"));
     let mut found = HashSet::new();
-    walk_jpegs(dir.path(), &mut found);
-    assert_eq!(found, expected, "orphan or missing tile files");
+    walk_jpegs_and_manifest(dir.path(), &mut found);
+    assert_eq!(found, expected, "orphan or missing tile/manifest files");
 }
 
 #[test]
@@ -626,10 +678,9 @@ fn an_absolute_id_makes_every_manifest_id_absolute_and_silences_the_warning() {
 
 /// A 1024x1024 image has no `full/max`: only levels that fit in one tile get a whole-image file.
 ///
-/// Calls `manifest_json` directly rather than going through a real export: this fixture has one
-/// z-plane, so under the `plan.views.len() > 1` gate (writer.rs) a real `--planes` export of it no
-/// longer writes a manifest at all. Calling `manifest_json` with a plan built for it directly
-/// still pins the largest-whole-image selection against a real fixture's `ImageInfo`, not just the
+/// Calls `manifest_json` directly rather than going through a real export: every export writes a
+/// manifest regardless of view count, but pinning the largest-whole-image selection against a real
+/// fixture's `ImageInfo` directly is still worth doing on its own, not just through the
 /// enumerator's own synthetic unit tests.
 #[test]
 fn a_large_image_points_its_body_at_the_largest_whole_image_file() {
@@ -760,16 +811,18 @@ fn an_unpyramided_image_warns_that_it_writes_a_full_resolution_whole_image() {
 /// A trimmed pyramid (`MULTI_TILE`, OSD reconstructs the dropped entry on its own) and untrimmed
 /// pyramids whose finest level already fits one tile (`V04`, `LABELS`: OSD already requests that
 /// whole image, so writing it is free) cost nothing extra and must not warn about it. Each
-/// fixture's plain export has exactly one view, so no manifest is written either, and
-/// `summary.warnings` has no other source to populate it from.
+/// fixture's plain export still writes a one-canvas `manifest.json` (every export does, regardless
+/// of view count), so `summary.warnings` has exactly one entry -- the manifest's own relative-id
+/// warning, since the default `--id` (`.`) is relative -- and nothing from the level0 cost path.
 #[test]
 fn a_trimmed_or_cheaply_untrimmed_pyramid_has_no_level0_cost_warning() {
     for fixture in [MULTI_TILE, V04, LABELS] {
         let (_dir, summary) = export_to(&engine(fixture), &ExportOptions::default());
-        assert!(
-            summary.warnings.is_empty(),
-            "{fixture}: {:?}",
-            summary.warnings
+        assert_eq!(
+            summary.warnings,
+            vec![exporter::RELATIVE_MANIFEST_WARNING.to_string()],
+            "{fixture}: only the manifest's relative-id warning should fire, no level0 cost \
+             warning"
         );
     }
 }
