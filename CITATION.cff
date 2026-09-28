@@ -11,8 +11,8 @@ authors:
     given-names: Deepa
     orcid: "https://orcid.org/0000-0002-6540-9259"
     affiliation: "Hiroshima University"
-version: 0.1.1
-date-released: "2026-09-19"
+version: 0.1.2
+date-released: "2026-09-28"
 license: MIT
 repository-code: "https://github.com/nishad/ziv"
 url: "https://nishad.github.io/ziv-demos/"
